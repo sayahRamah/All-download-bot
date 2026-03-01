@@ -6,18 +6,19 @@ import http.server
 import socketserver
 import threading
 
-# فتح منفذ وهمي لإرضاء Render
+# 1. فتح منفذ وهمي لإرضاء Render (لا تلمس هذا الجزء)
 def start_server():
     port = 10000
     handler = http.server.SimpleHTTPRequestHandler
-    with socketserver.TCPServer(("", port), handler) as httpd:
-        httpd.serve_forever()
+    try:
+        with socketserver.TCPServer(("", port), handler) as httpd:
+            httpd.serve_forever()
+    except Exception as e:
+        print(f"Server error: {e}")
 
 threading.Thread(target=start_server, daemon=True).start()
 
-
-
-# بيانات البوت الخاصة بك
+# 2. بيانات البوت الخاصة بك
 API_TOKEN = '8574425507:AAHLjTZ4W4xEQe5l9KLXYvbOfRbZhwkCukA'
 ADSTERRA_URL = 'https://www.effectivegatecpm.com/tt2p09h6td?key=c8046088eb31ef124f0e28531e06bec0'
 
@@ -41,9 +42,14 @@ def handle_message(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    data = call.data.split("|")
-    quality_choice = data
-    video_url = data
+    # تصحيح استخراج البيانات
+    try:
+        data = call.data.split("|")
+        quality_choice = data
+        video_url = data
+    except:
+        bot.send_message(call.message.chat.id, "Data error!")
+        return
 
     ad_markup = types.InlineKeyboardMarkup()
     ad_btn = types.InlineKeyboardButton("Click to Unlock & Download 🔓", url=ADSTERRA_URL)
@@ -54,29 +60,33 @@ def callback_query(call):
                          text="Processing... Click the link to support us and get your video:\nاضغط الرابط لفك التشفير واستلام الفيديو:", 
                          reply_markup=ad_markup)
 
+    # إعدادات yt-dlp مع تحسينات التخفي
     format_option = 'best' if quality_choice == "high" else 'worst'
-        ydl_opts = {
+    filename = f'video_{call.from_user.id}.mp4'
+    
+    ydl_opts = {
         'format': format_option,
-        'outtmpl': f'video_{call.from_user.id}.mp4',
+        'outtmpl': filename,
         'quiet': True,
         'no_warnings': True,
-        # إضافة هوية متصفح حقيقي لتجنب الحظر
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'nocheckcertificate': True,
         'add_header': [
             'Accept-Language: en-US,en;q=0.9',
-            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         ],
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([video_url])
-            filename = f'video_{call.from_user.id}.mp4'
+            
+        if os.path.exists(filename):
             with open(filename, 'rb') as video:
                 bot.send_video(call.message.chat.id, video, caption="Done! ✅")
             os.remove(filename)
+        else:
+            bot.send_message(call.message.chat.id, "Could not find the video file.")
     except Exception as e:
-        bot.send_message(call.message.chat.id, "Error! Link might not be supported.")
+        bot.send_message(call.message.chat.id, f"Error: Link might be private or not supported.")
 
-bot.polling()
+bot.polling(non_stop=True)
