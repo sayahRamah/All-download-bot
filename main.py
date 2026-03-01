@@ -2,6 +2,20 @@ import telebot
 from telebot import types
 import yt_dlp
 import os
+import http.server
+import socketserver
+import threading
+
+# فتح منفذ وهمي لإرضاء Render
+def start_server():
+    port = 10000
+    handler = http.server.SimpleHTTPRequestHandler
+    with socketserver.TCPServer(("", port), handler) as httpd:
+        httpd.serve_forever()
+
+threading.Thread(target=start_server, daemon=True).start()
+
+
 
 # بيانات البوت الخاصة بك
 API_TOKEN = '8574425507:AAHLjTZ4W4xEQe5l9KLXYvbOfRbZhwkCukA'
