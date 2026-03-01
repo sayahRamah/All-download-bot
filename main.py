@@ -1,29 +1,31 @@
 import telebot
 from telebot import types
 import urllib.parse
-import http.server
-import socketserver
+from flask import Flask
 import threading
+import os
 
-# 1. فتح منفذ وهمي لإرضاء Render
-def start_server():
-    port = 10000
-    handler = http.server.SimpleHTTPRequestHandler
-    try:
-        with socketserver.TCPServer(("", port), handler) as httpd:
-            httpd.serve_forever()
-    except:
-        pass
+# --- جزء السيرفر لإبقاء البوت حياً (Flask) ---
+app = Flask(__name__)
 
-threading.Thread(target=start_server, daemon=True).start()
+@app.route('/')
+def home():
+    return "Bot is Running!"
 
-# 2. بيانات البوت
+def run_flask():
+    # Render يحتاج لقراءة الـ PORT ليعتبر السيرفر ناجحاً
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
+
+# تشغيل Flask في خيط منفصل
+threading.Thread(target=run_flask, daemon=True).start()
+
+# --- إعدادات البوت ---
 API_TOKEN = '8574425507:AAEAXECAtzC-MUJnAGnEBpUe_L-MnNRHUwg'
 ADSTERRA_URL = 'https://www.effectivegatecpm.com/tt2p09h6td?key=c8046088eb31ef124f0e28531e06bec0'
 
 bot = telebot.TeleBot(API_TOKEN)
 
-# دالة توليد الرابط
 def generate_download_link(url):
     encoded_url = urllib.parse.quote(url)
     if "tiktok.com" in url:
@@ -35,45 +37,28 @@ def generate_download_link(url):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.reply_to(message, "✅ Bot is Online!\nأرسل رابط أي فيديو (TikTok, YT, IG) للتحميل المباشر:")
+    bot.reply_to(message, "⚡️ البوت يعمل الآن بكفاءة عالية!\nأرسل رابط الفيديو الذي تريد تحميله:")
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     url = message.text
     if "http" in url:
         markup = types.InlineKeyboardMarkup(row_width=1)
-        # الزر الأول: الإعلان
         ad_btn = types.InlineKeyboardButton("🔓 Step 1: Unlock & Support", url=ADSTERRA_URL)
-        # الزر الثاني: جلب الرابط (تأكد من الـ callback_data)
         check_btn = types.InlineKeyboardButton("✅ Step 2: Get Download Link", callback_data=f"get_link|{url}")
-        
         markup.add(ad_btn, check_btn)
-        
-        bot.send_message(message.chat.id, 
-                         "🚀 Video Link Processed!\n\n1️⃣ Click 'Step 1' (Ad).\n2️⃣ Click 'Step 2' to get the link.", 
-                         reply_markup=markup)
+        bot.send_message(message.chat.id, "🚀 تمت معالجة الرابط!\n\n1️⃣ اضغط على الرابط الأول لدعمنا.\n2️⃣ اضغط على الزر الثاني للحصول على الفيديو.", reply_markup=markup)
     else:
-        bot.send_message(message.chat.id, "Please send a valid link!")
+        bot.send_message(message.chat.id, "يرجى إرسال رابط صحيح.")
 
-# معالج ضغطات الأزرار (Callback Query)
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    # إخبار تلغرام أننا استلمنا النقرة فوراً لإخفاء علامة التحميل على الزر
-    bot.answer_callback_query(call.id, "Processing your request...")
-
+    bot.answer_callback_query(call.id, "جاري استخراج الرابط...")
     if "get_link|" in call.data:
-        try:
-            video_url = call.data.split("|")
-            direct_link = generate_download_link(video_url)
-            
-            # إرسال النتيجة في رسالة جديدة لضمان الوضوح
-            bot.send_message(call.message.chat.id, 
-                             f"✅ **Success!**\n\n[📥 Click here to Download Video]({direct_link})\n\n"
-                             f"*(If the page opens, just click the Download button)*", 
-                             parse_mode="Markdown")
-        except Exception as e:
-            bot.send_message(call.message.chat.id, "❌ Error generating link. Please try again.")
+        video_url = call.data.split("|")
+        direct_link = generate_download_link(video_url)
+        bot.send_message(call.message.chat.id, f"✅ تفضل، رابط التحميل جاهز:\n\n[📥 اضغط هنا للتحميل المباشر]({direct_link})", parse_mode="Markdown")
 
-# تشغيل البوت مع حذف الويب هوك وتجاهل الرسائل القديمة
+# تنظيف أي اتصال قديم وبدء العمل
 bot.remove_webhook()
 bot.polling(non_stop=True, skip_pending=True)
