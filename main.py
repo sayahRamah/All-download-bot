@@ -55,7 +55,19 @@ def callback_query(call):
                          reply_markup=ad_markup)
 
     format_option = 'best' if quality_choice == "high" else 'worst'
-    ydl_opts = {'format': format_option, 'outtmpl': f'video_{call.from_user.id}.mp4', 'quiet': True}
+        ydl_opts = {
+        'format': format_option,
+        'outtmpl': f'video_{call.from_user.id}.mp4',
+        'quiet': True,
+        'no_warnings': True,
+        # إضافة هوية متصفح حقيقي لتجنب الحظر
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'nocheckcertificate': True,
+        'add_header': [
+            'Accept-Language: en-US,en;q=0.9',
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        ],
+    }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
