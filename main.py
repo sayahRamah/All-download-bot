@@ -18,7 +18,7 @@ def run_flask():
 threading.Thread(target=run_flask, daemon=True).start()
 
 # --- إعدادات البوت ---
-API_TOKEN = '8574425507:AAEAXECAtzC-MUJnAGnEBpUe_L-MnNRHUwg'
+API_TOKEN = '8731327749:AAHS4J_2r_k4NU8F4zY0s-KPFdc4bGrPZP4'
 ADSTERRA_URL = 'https://www.effectivegatecpm.com/tt2p09h6td?key=c8046088eb31ef124f0e28531e06bec0'
 
 bot = telebot.TeleBot(API_TOKEN)
